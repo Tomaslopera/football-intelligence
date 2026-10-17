@@ -354,6 +354,177 @@ Quality thresholds are configurable diagnostics, not official competition valida
 
 Actual Metrica data compatibility remains unverified until the licensed source files are available.
 
+## Real Metrica Data Integration — Phase 1.5
+
+### Purpose
+
+Phase 1.5 connects the Football Intelligence Platform's canonical tracking pipeline to actual Metrica Sports EPTS tracking datasets.
+
+The objective is to support real football tracking observations without changing the existing ingestion, storage, analytics, and data quality architecture.
+
+The integration is designed around an adapter that converts provider-specific data into the standardized input representation established in Phase 1.2.
+
+### Source Format
+
+The Metrica tactical tracking dataset is distributed using the EPTS (Electronic Performance and Tracking Systems) format.
+
+The expected source consists of:
+
+- An XML metadata file describing the tracking dataset.
+- A TXT file containing time-series tracking observations.
+
+The integration uses the Kloppy Python library to parse EPTS data and produce a Pandas DataFrame.
+
+The tactical recording is the reference timeline for tracking observations.
+
+Source frame identifiers are one-based. The canonical application uses zero-based frame identifiers.
+
+The existing alignment utilities perform this conversion.
+
+### Metrica Adapter
+
+The implementation is located at:
+
+`src/football_intelligence/tracking/metrica.py`
+
+The module provides two principal functions.
+
+**`load_metrica_epts()`**
+
+- Validates that the source files exist.
+- Loads EPTS tracking data using Kloppy.
+- Converts the loaded dataset into a Pandas DataFrame.
+- Supports optional sample limits.
+- Verifies the existence of the `frame_id` column.
+- Returns a DataFrame with normalized tracking column names.
+
+**`normalize_metrica_columns()`**
+
+- Standardizes supported track-slot naming conventions.
+- Maps columns such as `Track_1_x` to `1_x`.
+- Preserves ball observation columns.
+- Detects conflicting column names created during normalization.
+- Produces a schema compatible with the existing ingestion adapter.
+
+The adapter isolates Metrica-specific conventions from the internal canonical tracking models.
+
+### Canonical Data Flow
+
+The intended real-data workflow is:
+
+1. Load authorized EPTS XML and TXT files through Kloppy.
+2. Inspect and normalize tracking columns.
+3. Resolve track-slot team membership using verified source metadata.
+4. Convert source observations into canonical `TrackingFrame` objects.
+5. Align source frame identifiers with the zero-based tactical-video timeline.
+6. Persist canonical frame and player observations to Parquet.
+7. Run analytical queries and data quality checks using DuckDB.
+8. Generate quality reports and lineage metadata for the processed dataset.
+
+The pipeline reuses the implementations developed during Phases 1.1–1.4.
+
+### Track-Slot Identity and Team Mapping
+
+Tracking slots represent source observation channels and must not be assumed to correspond to permanent player identities.
+
+Track-slot numbers must not be interpreted as team assignments without supporting metadata.
+
+Canonical `PlayerObservation` objects require explicit home or away team membership.
+
+A verified mapping between source track slots and team membership must be established before real-match ingestion.
+
+Unknown or ambiguous team assignments must not be silently guessed.
+
+Actual mapping behavior and stability across frames remain subject to verification against the authorized dataset.
+
+### Inspection Tool
+
+The inspection script is located at:
+
+`scripts/inspect_metrica.py`
+
+It accepts paths to the EPTS metadata and tracking files.
+
+Its purpose is to inspect:
+
+- Loaded row and column counts.
+- Available tracking column names.
+- Source frame identifiers.
+- Sample DataFrame structure.
+- Source conventions relevant to canonical ingestion.
+
+The script is intended for local inspection of authorized data.
+
+Restricted match observations and files must not be committed or publicly redistributed.
+
+### Validation Strategy
+
+**Tests available without the real dataset:**
+
+- Supported column-name normalization.
+- Detection of conflicting normalized column names.
+- Compatibility with the existing DataFrame ingestion adapter.
+- One-based to zero-based frame conversion.
+- Handling of missing ball observations.
+- Rejection of missing source files.
+
+**Verification requiring authorized Metrica files:**
+
+- Successful loading of the actual EPTS XML/TXT pair.
+- Actual source schema compatibility.
+- Metadata extraction and track-slot team mapping.
+- Frame count and frame alignment verification.
+- Full-match Parquet serialization.
+- Real-data quality analysis and anomaly investigation.
+- End-to-end lineage reporting.
+
+Synthetic and mocked tests validate the adapter's expected behavior but do not establish compatibility with the actual competition files.
+
+### Data Governance
+
+Official competition datasets remain subject to their applicable access and usage restrictions.
+
+Source files and restricted derived tracking observations must remain outside the public Git repository.
+
+The `datasets/raw/` and `datasets/generated/` directories are excluded from version control.
+
+Only source code, synthetic fixtures, tests, and permitted documentation should be published.
+
+### Current Limitations
+
+The initial adapter does not yet resolve team membership automatically from actual EPTS metadata.
+
+Real source schema conventions and metadata structures have not been verified.
+
+Full-match memory usage, ingestion performance, and Parquet output sizes have not yet been measured.
+
+The initial implementation uses an in-memory DataFrame and canonical-object conversion. Streaming or chunked processing may be introduced following real-dataset profiling.
+
+### Implementation Status
+
+**Preparatory implementation:**
+
+- Kloppy integration and EPTS loading interface.
+- Tracking column normalization.
+- Source file validation.
+- Compatibility tests using synthetic DataFrames.
+- Local inspection script.
+
+These components are considered implemented only after their corresponding code and automated tests pass.
+
+**Pending real-data verification:**
+
+- Access to the authorized Metrica tracking dataset.
+- Validation against actual EPTS files.
+- Verified track-slot team mapping.
+- Full-match ingestion, Parquet storage, and quality reporting.
+- Frame alignment and source metadata verification.
+- End-to-end performance and data integrity assessment.
+
+**Phase 1.5 status: In progress — awaiting real-data verification.**
+
+Phase 1 will be considered complete only after the authorized real-match integration has been successfully validated.
+
 ## Planned pipeline stages
 
 ### 1. Official source loading and source provenance
