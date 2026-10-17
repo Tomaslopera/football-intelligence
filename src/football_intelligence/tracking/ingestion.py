@@ -121,7 +121,6 @@ def normalize_record(
     )
 
 
-
 def iter_tracking_frames(
     table: pd.DataFrame,
     *,
@@ -164,4 +163,3 @@ def iter_tracking_frames(
         )
 
         previous_id = frame_id
-
