@@ -1,6 +1,18 @@
 # Data Flow and Lineage — Football Intelligence Platform
 
-**Status:** Planned v0.1. The official reference scorer has been executed; production ingest/inference pipelines are not yet implemented.
+**Status:** Partially implemented — Phase 1.1
+
+**Implemented:**
+- Canonical tracking domain models
+- ATD/video frame alignment utilities
+- Structural validation
+- Unit tests
+
+**Planned:**
+- Metrica ingestion adapters
+- Parquet storage and DuckDB integration
+- Data quality reporting
+- Feature engineering and AI inference
 
 ## Data flow
 ```mermaid
@@ -36,7 +48,22 @@ Output: parsed source records with source hash, source-relative timestamp/frame,
 Reference: tactical frames **0..199318** at **25 fps**. Preserve unmapped/missing observations with explicit quality flags. Broadcast alignment is a separate optional research task, not an early dependency.
 
 ### 3. Canonical intermediate data
-Suggested fields: `match_id`, `frame`, `half`, `ball_visible`, `ball_x`, `ball_y`, `team_observations`, `tracking_quality`, `homography_valid`, tagging signals. Confirm source units/coordinate conventions from `DATA.md` and real assets before finalizing storage format.
+Every TrackingFrame is uniquely identified by:
+
+(match_id, source, frame)
+
+Frame numbers are zero-based and relative to their recording
+source. Tactical and broadcast frames must never be assumed
+to represent the same moment.
+
+Missing observations are represented by None in domain
+models and converted to null values in analytical storage.
+
+> Raw source files are immutable.
+
+> Normalization never modifies the original competition files. All transformations produce new, versioned artifacts.
+
+> The system preserves source provenance so every prediction can be traced back to its input data and configuration.
 
 ### 4. Feature generation
 Compute distance-to-ball by team, relative movements, density, transitions, time since last reliable ball observation, and restart priors. Use windows that do not accidentally leak labels or unavailable inference-time information. For offline full-match processing, bidirectional context is technically possible if rule-compliant and documented.
@@ -78,3 +105,40 @@ Fail before export on contract violations; emit stage error + lineages; rerun id
 
 ## Legal boundaries
 Data access terms control whether storage, third-party processing, publishing, or cloud hosting are allowed. By default public repo and CI use synthetic data only; do not send restricted competition data or extracts to hosted/cloud LLMs.
+
+## Canonical Tracking Data Contracts — Phase 1.1
+
+The platform uses internal tracking contracts independent of Metrica's original export format.
+
+### Domain models
+
+- `MatchMetadata`: match identity, teams, frame rate, total frame count and pitch dimensions.
+- `TrackingFrame`: a single zero-based video frame and its available tracking observations.
+- `PlayerObservation`: a tracked slot, team membership, optional position and speed.
+- `BallObservation`: optional ball position and speed.
+- `PitchPosition`: finite, normalized pitch coordinates.
+- `RecordingSource`: explicit tactical, broadcast or synthetic source identification.
+
+### Alignment conventions
+
+ATD tracking IDs are one-based. Canonical video frames are zero-based:
+
+`video_frame = atd_frame_id - 1`
+
+Smart Tagging intervals use seconds from the start of the tactical video, converted with the source frame rate.
+
+Homography frame indices are already zero-based.
+
+Broadcast and tactical recordings have independent timelines and must not be joined by frame number without an explicit synchronization method.
+
+### Validation policy
+
+Structural validation is performed at the domain boundary.
+
+Missing ball or player observations are permitted. Duplicate tracking slots within one frame, negative frame numbers, negative speeds and non-finite canonical coordinates are rejected.
+
+Spatial outliers are preserved for later data-quality analysis rather than silently clipped.
+
+### Current implementation status
+
+Phase 1.1 defines and tests these contracts. Official Metrica file parsing, missing-value normalization, full-match ingestion and analytical storage are future work.
