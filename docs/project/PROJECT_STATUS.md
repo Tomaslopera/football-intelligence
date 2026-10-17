@@ -1,65 +1,149 @@
+
 # Football Intelligence — Current Status
 
 **Last updated:** 2026-10-17
 
 ## Current Position
 
-Phase 1 Data Engineering Foundation is largely complete.
+Phase 1 Data Engineering Foundation is implemented and verified
+using synthetic datasets.
 
-Phase 1.5 Metrica integration adapter has been pushed but awaits authorized real-data verification.
+Phase 1.5 Metrica integration adapter is implemented but awaits
+authorized real-data verification.
 
-Phase 2 Possession Intelligence has not started.
+Phase 2.0 Possession Foundation is complete. Official Metrica
+submission validation and public evaluator integration succeeded.
+
+Phase 2.1 Football Feature Engineering is implemented and locally
+tested. Documentation and GitHub Actions verification are pending.
+
+Phase 2.2 ML Experimentation has not started.
 
 Backend, frontend, and cloud deployment have not started.
 
-## Completed
+## Completed and Verified
 
-- Repository setup and CI.
-- Canonical tracking models.
-- Synthetic data ingestion.
-- Parquet storage and DuckDB querying.
-- Data quality and lineage.
-- Metrica adapter preparation.
-- Architecture planning.
+### Phase 1 — Data Engineering
 
-## Active or Pending
+- Canonical tracking domain models and frame alignment.
+- Synthetic tracking ingestion.
+- Parquet storage and DuckDB analytical querying.
+- Data quality checks and lineage.
+- Preparation of the Metrica EPTS adapter.
 
-- Real Metrica data access and inspection.
-- Team-slot metadata mapping.
-- Full-match end-to-end verification.
-- Phase 2 AI architecture and features.
-- Public-safe product data strategy.
+### Phase 2.0 — Possession Foundation
+
+- Canonical possession prediction contracts.
+- Prediction sequence alignment and validation.
+- Contiguous possession-state segment extraction.
+- Official competition CSV export.
+- Public ground-truth reader and grading mask.
+- Synthetic full-match submission demonstration.
+- Successful official Metrica submission validation.
+- Successful official public evaluator execution.
+
+Synthetic evaluation scores are integration diagnostics,
+not evidence of trained-model performance.
+
+### Phase 2.1 — Feature Engineering
+
+Locally verified:
+
+- Spatial distances in meters.
+- Nearest home and away player features.
+- Ball visibility and player coverage features.
+- Causal ball displacement and derived speed.
+- Team mean reported speeds.
+- Missing-ball streaks.
+- Temporal distance-advantage changes.
+- Versioned PyArrow/Parquet feature datasets.
+- Feature schema validation and nullable values.
+- End-to-end synthetic tracking-to-Parquet pipeline.
+- DuckDB feature queries.
+
+Pending before milestone closure:
+
+- Documentation synchronization.
+- Final repository quality checks.
+- Git commit and push.
+- Successful GitHub Actions verification.
+
+Technical documentation:
+`docs/ai/feature-engineering.md`
+
+## Active Dependencies
+
+- Authorized real Metrica tracking data access.
+- Verification of real EPTS ingestion.
+- Official team/track-slot metadata mapping.
+- Real-match feature quality inspection.
+- Governance and redistribution review for derived data.
+- Public-safe dataset and showcase strategy.
+
+Real-data integration remains open independently of the
+synthetic-data milestones.
+
+## Next Priority — Phase 2.2 ML Experimentation
+
+Plan and implement a reproducible experimentation foundation.
+
+Initial goals:
+
+- Training and evaluation dataset contracts.
+- Explicit target-label availability and grading masks.
+- Data leakage prevention.
+- Feature-set configurations and ablations.
+- Reproducible experiment manifests.
+- Heuristic baseline models.
+- Classical probabilistic models.
+- Gradient-boosted models.
+- Temporal modeling and postprocessing experiments.
+- Evaluation using the official competition scorer.
+
+No final model family has been selected.
+
+The public five-minute ground truth is suitable for integration
+diagnostics, not reliable model selection.
+
+Training on restricted assets requires permitted data access.
+No private ground truth is available.
 
 ## Architecture Decisions
 
 - Python-first modular architecture.
-- Serverless-first deployment.
-- AWS Lambda rather than ECS/Fargate for the initial API.
-- Supabase Free PostgreSQL for application metadata.
-- Parquet/DuckDB for analytical datasets.
-- Next.js frontend, static where possible.
-- Local ML training initially.
-- Containerized model workload only if justified.
-- Terraform and GitHub Actions.
+- Independently executable data, AI, and API responsibilities.
+- Modular monolith initially.
+- Next.js / React / TypeScript frontend.
+- AWS Lambda preferred for the initial Python API.
+- Supabase Free PostgreSQL for application and experiment metadata.
+- Parquet and DuckDB for high-volume analytical datasets.
+- Local model training and batch inference initially.
+- Precomputed predictions preferred for the initial public product.
+- On-demand model containers only if technically justified.
+- No always-running model server by default.
+- Terraform for infrastructure as code.
+- GitHub Actions for CI/CD.
 - Cost minimization is a primary requirement.
 - No exact monthly cloud budget has been confirmed.
+- Restricted tracking data must not be redistributed.
 
 ## Open Decisions
 
 - Final product branding.
-- Specific AWS/frontend hosting option.
-- Lambda function boundaries.
+- Specific AWS and frontend hosting provider.
+- Lambda responsibility boundaries.
 - Pitch rendering technology.
-- Model framework and experiment tracking.
+- Model framework and experiment-tracking implementation.
 - Exact monthly cloud budget.
 - Public-safe showcase data source.
-
-## Immediate Priority
-
-Begin Phase 2 AI Engineering planning while keeping real Metrica integration open.
+- Final model family and feature combinations.
 
 ## Completion Rules
 
-A phase is complete only after its relevant implementation, tests, documentation, and integration verification pass.
+A milestone is complete only after relevant implementation,
+tests, documentation, and integration verification pass.
 
-Update this file after every milestone and major architecture decision.
+Local verification and successful GitHub CI are distinct
+completion conditions.
+
+Keep project documentation synchronized with implemented code.
