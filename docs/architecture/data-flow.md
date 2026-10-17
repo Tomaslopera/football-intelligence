@@ -93,6 +93,267 @@ Sources:
 
 Tests cover deterministic synthetic ingestion, ball missingness, incomplete coordinates, missing slot-to-team mapping, gaps in frame sequences, and individual-record frame alignment. Phase 1.1 also tests basic tracking-model invariants. These tests validate *our implementation*, not compatibility with the as-yet-unavailable licensed tracking bundle.
 
+## Analytical Storage — Phase 1.3
+
+### Purpose
+
+The analytical storage layer provides persistent, structured, and queryable storage for canonical football tracking observations.
+
+After ingestion and normalization, tracking data is serialized into Apache Parquet files. DuckDB is used to execute analytical SQL queries directly against those files without requiring a separate database server.
+
+The primary objectives are:
+
+- Persist validated tracking observations beyond application execution.
+- Preserve the canonical data model through serialization and deserialization.
+- Support efficient analytical queries over frame and player observations.
+- Establish a reusable data foundation for feature engineering, possession inference, and match visualization.
+- Separate source-data ingestion from downstream analytical processing.
+
+### Storage Architecture
+
+The platform uses two Parquet datasets:
+
+**1. Frame observations — `frames.parquet`**
+
+One record per tracking frame.
+
+| Column | Data type | Description |
+|---|---|---|
+| `match_id` | String | Match identifier |
+| `source` | String | Recording source |
+| `frame` | Int64 | Zero-based frame identifier |
+| `ball_x` | Float64, nullable | Normalized ball X coordinate |
+| `ball_y` | Float64, nullable | Normalized ball Y coordinate |
+| `ball_speed_mps` | Float64, nullable | Ball speed in meters per second |
+
+**2. Player observations — `players.parquet`**
+
+One record per player track-slot observation within a frame.
+
+| Column | Data type | Description |
+|---|---|---|
+| `match_id` | String | Match identifier |
+| `source` | String | Recording source |
+| `frame` | Int64 | Zero-based frame identifier |
+| `track_slot` | Int64 | Source tracking slot |
+| `team` | String | Home (`H`) or away (`A`) |
+| `x` | Float64, nullable | Normalized player X coordinate |
+| `y` | Float64, nullable | Normalized player Y coordinate |
+| `speed_mps` | Float64, nullable | Player speed in meters per second |
+
+The logical identity of a frame is `(match_id, source, frame)`.
+
+Player observations are identified by `(match_id, source, frame, track_slot)`.
+
+The datasets are linked through the shared frame identity.
+
+### Serialization and Deserialization
+
+The storage implementation is located in:
+
+`src/football_intelligence/tracking/storage.py`
+
+It provides two public functions:
+
+**`write_tracking_parquet()`**
+
+- Accepts canonical `TrackingFrame` objects.
+- Separates frame-level and player-level observations.
+- Serializes data using explicit PyArrow schemas.
+- Uses Zstandard compression.
+- Preserves missing observations as null values.
+- Rejects duplicate frame identities.
+- Creates `frames.parquet` and `players.parquet`.
+
+**`read_tracking_parquet()`**
+
+- Reads both Parquet datasets.
+- Reconstructs canonical Pydantic tracking objects.
+- Restores player observations to their corresponding frames.
+- Preserves nullable positions and speeds.
+- Rejects duplicate frame identities and orphan player observations.
+
+Serialization is verified through round-trip tests:
+
+`TrackingFrame → Parquet → TrackingFrame`
+
+For valid datasets, reconstructed objects must equal their original canonical representations.
+
+### Analytical Querying
+
+The analytical implementation is located in:
+
+`src/football_intelligence/tracking/analytics.py`
+
+DuckDB queries the Parquet files directly using an in-memory database connection.
+
+The initial `tracking_summary()` function calculates:
+
+- Total stored frames.
+- Frames containing ball position observations.
+- Frames missing ball position observations.
+- Player observations containing valid positions.
+
+This approach supports analytical operations without reconstructing all tracking records into Python objects.
+
+DuckDB will also support future feature engineering, temporal analytics, player movement statistics, and AI dataset preparation.
+
+### End-to-End Demonstration
+
+The demonstration script is located at:
+
+`scripts/demo_storage.py`
+
+The workflow is:
+
+1. Generate deterministic synthetic tracking records.
+2. Normalize records into canonical `TrackingFrame` objects.
+3. Persist frame and player observations to Parquet.
+4. Query the stored datasets using DuckDB.
+5. Display tracking coverage metrics.
+
+Generated files are stored under:
+
+`datasets/generated/demo/`
+
+For the standard 100-frame synthetic example, the expected results are:
+
+| Metric | Expected value |
+|---|---:|
+| Total frames | 100 |
+| Ball-visible frames | 80 |
+| Missing-ball frames | 20 |
+| Tracked player observations | 200 |
+
+These values describe synthetic test data, not actual competition observations.
+
+### Validation and Testing
+
+The storage layer includes automated tests for:
+
+- Parquet file creation.
+- Serialization/deserialization consistency.
+- Preservation of missing ball positions.
+- Empty dataset handling.
+- Duplicate frame rejection.
+- DuckDB analytical query correctness.
+
+The implementation is validated locally using pytest, Ruff, and mypy.
+
+### Data Governance
+
+Generated and restricted datasets must remain outside public version control.
+
+The following directories are excluded through `.gitignore`:
+
+- `datasets/generated/`
+- `datasets/raw/`
+
+Source code, tests, documentation, and reproducible synthetic generators may be committed.
+
+Official competition data and restricted derived assets must not be uploaded to the public repository.
+
+### Current Limitations
+
+The initial implementation is designed for local development and controlled datasets.
+
+The following capabilities are not yet implemented:
+
+- Streaming serialization for full-match datasets.
+- Partitioned Parquet storage.
+- Atomic dataset publication.
+- Dataset versioning and lifecycle management.
+- Cloud object storage integration.
+- Full-match performance profiling.
+- Production-oriented analytical query optimization.
+
+Storage schema versioning and reproducibility metadata are introduced separately in Phase 1.4 through the lineage manifest.
+
+### Implementation Status
+
+**Completed and locally verified:**
+
+- Explicit Parquet schemas for frames and players.
+- Canonical tracking serialization and deserialization.
+- Zstandard-compressed Parquet storage.
+- Direct DuckDB analytical queries.
+- Automated storage and analytics tests.
+- End-to-end synthetic tracking demonstration.
+
+**Pending:**
+
+- Full-match scalability verification.
+- Integration with authorized Metrica tracking datasets.
+- Production storage optimization and cloud integration.
+
+Phase 1.3 establishes the persistent analytical foundation for subsequent data quality, feature engineering, AI inference, and visualization components.
+
+
+## Data Quality & Lineage — Phase 1.4
+
+### Purpose
+
+The tracking data quality layer evaluates whether persisted observations are complete, temporally consistent and spatially plausible before downstream feature engineering or AI inference.
+
+Quality checks operate against the Parquet storage layer using DuckDB. They are diagnostic and must not silently modify tracking observations.
+
+### Quality measurements
+
+**Coverage**
+- Total stored frames.
+- Frames with missing ball coordinates.
+- Ball tracking coverage percentage.
+- Tracked player observations.
+- Player observations with missing positions.
+
+**Temporal integrity**
+- Missing frame identifiers between observed frames.
+- Number of frame gaps.
+- Duplicate frame identifiers.
+- Duplicate player observations.
+- Player observations without corresponding frame records.
+
+**Spatial diagnostics**
+- Ball observations outside configured pitch boundaries.
+- Player observations outside configured pitch boundaries.
+- Player speeds above a configurable threshold.
+
+Spatial thresholds are initial assumptions and must be verified against actual Metrica coordinate conventions and units.
+
+### Lineage
+
+Every quality run can produce a lineage manifest containing:
+
+- Storage schema version.
+- Manifest creation timestamp in UTC.
+- Source description.
+- Optional Git commit identifier.
+- Quality-check configuration.
+- SHA-256 fingerprints and sizes of input Parquet files.
+
+This allows the system to identify the exact stored input files used during quality analysis.
+
+The manifest does not yet capture the complete upstream transformation history.
+
+### Report outputs
+
+The reporting layer produces:
+
+- `quality.json` for software consumers.
+- `quality.md` for human inspection.
+
+Reports are stored locally under `datasets/generated/` and excluded from version control.
+
+### Limitations
+
+The current quality layer operates on local Parquet datasets and does not yet include production data quality orchestration.
+
+Temporal gap detection does not verify the expected first and last frames of a recording.
+
+Quality thresholds are configurable diagnostics, not official competition validation rules.
+
+Actual Metrica data compatibility remains unverified until the licensed source files are available.
+
 ## Planned pipeline stages
 
 ### 1. Official source loading and source provenance
