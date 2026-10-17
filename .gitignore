@@ -15,3 +15,7 @@ wheels/
 
 # Restricted match data (keep all private)
 /datasets/raw/
+
+# AI .md
+AGENTS.md
+CLAUDE.md
