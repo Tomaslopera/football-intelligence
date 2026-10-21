@@ -21,19 +21,19 @@ flowchart TB
 ## Boundaries and responsibilities
 | Component | Responsibility | Depends on | Current state |
 |---|---|---|---|
-| `core` | Prediction label enum, frame/spell schemas, shared invariants | Pydantic / standard library | Basic model implemented |
-| `data` | Source adapters, schema validation, frame/time alignment, data quality | `core` | Planned |
-| `features` | Deterministic spatial/temporal features | `core`, `data` | Planned |
-| `intelligence` | Baselines, ML inference, temporal decoding | `core`, `features` | Planned |
-| `analytics` | Possession segmentation, summaries, evaluation context | `core`, prediction output | Planned |
-| `pipelines` | CLI orchestration, manifests, exporting | All offline modules | Planned |
+| `domain`, `tracking.models` | Prediction and canonical tracking contracts | Pydantic / standard library | Implemented |
+| `tracking` | Adapters, frame alignment, Parquet, DuckDB, quality and lineage | Canonical models | Synthetic verification; real EPTS verification pending |
+| `features` | Deterministic geometry, causal temporal features, versioned Parquet | `tracking` | Implemented; synthetic verification |
+| `intelligence` | Baselines, ML inference, temporal decoding | Contracts, `features` | Planned |
+| `possession` | Alignment, segments, public reference mask, CSV export | Contracts | Implemented; official synthetic export verified |
+| Scripts and `tracking.audit` | Local orchestration and aggregate audit artifacts | Offline modules | Implemented; synthetic verification |
 | `api` | Read-only match/prediction/replay endpoints | Serving datastore | Planned |
 | `web` | Match overview, timeline, tactical canvas, model lab | API | Planned |
 | `infra` | CI, images, optional cloud provisioning/monitoring | Deployable components | CI file created; deploy planned |
 
 ## Storage design
 - **Restricted raw assets**: local paths outside Git; do not redistribute.
-- **Canonical tracking/features**: compressed partitioned Parquet with schema/version/quality manifests; DuckDB for local analytics (planned).
+- **Canonical tracking/features**: local compressed Parquet and DuckDB implemented; feature schema versioning and tracking quality manifests implemented. Partitioning remains planned.
 - **Predictions / derived results**: versioned offline artifacts keyed by match, run, model, config and source fingerprint.
 - **Serving database**: PostgreSQL for match/experiment metadata and indices; store compact allowed replay chunks in permitted object storage (planned).
 - **Experiment metadata**: MLflow or small local manifest first; adopt MLflow when experiments justify it.

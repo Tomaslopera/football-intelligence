@@ -1,6 +1,10 @@
 # Data Flow and Lineage — Football Intelligence Platform
 
-**Status:** Partially implemented — Phase 1.2 (synthetic ingestion locally tested). Real Metrica ingestion, Parquet storage, feature engineering, inference, and serving are planned.
+**Status:** Canonical ingestion, Parquet/DuckDB storage, quality/lineage,
+possession contracts/export, and causal features are implemented. Full real
+tactical ingestion and corrected canonical/features pass local acceptance.
+Use `tactical-real-full-02`; GitHub CI for pending changes is unverified.
+Inference and serving are planned.
 
 ## Purpose and scope
 
@@ -248,6 +252,7 @@ The following directories are excluded through `.gitignore`:
 
 - `datasets/generated/`
 - `datasets/raw/`
+- `datasets/processed/`
 
 Source code, tests, documentation, and reproducible synthetic generators may be committed.
 
@@ -352,7 +357,8 @@ Temporal gap detection does not verify the expected first and last frames of a r
 
 Quality thresholds are configurable diagnostics, not official competition validation rules.
 
-Actual Metrica data compatibility remains unverified until the licensed source files are available.
+Full tactical Metrica compatibility has now been verified locally; see the
+Phase 1.5 source-unit correction and current audit report.
 
 ## Real Metrica Data Integration — Phase 1.5
 
@@ -408,6 +414,26 @@ The module provides two principal functions.
 
 The adapter isolates Metrica-specific conventions from the internal canonical tracking models.
 
+The user reports that the real tactical XML uses `kph` speed units. Kloppy
+3.19.1 preserves source speed numbers, verified by code inspection and
+synthetic EPTS tests. `load_metrica_epts()` converts `kph` to m/s once by
+dividing speed columns by 3.6 before canonical ingestion; declared `m/s`
+passes through. Unknown, missing or conflicting declared speed units are
+rejected. Column-name normalization alone does not change numeric units.
+Canonical `speed_mps`, feature speeds and quality thresholds remain in m/s.
+The full source audit and corrected derived rebuild are now verified locally.
+
+**Resolved BAR-ATH tactical convention:** the official challenge DATA.md
+explicitly defines the Kloppy speed values as m/s, corroborated by real
+motion diagnostics. `audit_metrica()` applies that documented source contract
+for match `BAR-ATH` / source `tactical` and records the XML kph declaration,
+effective m/s interpretation and official evidence. Generic EPTS loading
+keeps its declared-unit behavior; an explicit override requires evidence.
+Corrected full canonical/features are verified at `tactical-real-full-02`.
+They were rebuilt from the already validated canonical run, preserving raw
+inputs and recording upstream fingerprints. Local Phase 1.5/2.1 acceptance
+passes; GitHub CI remains unverified. See the current audit-report decision.
+
 ### Canonical Data Flow
 
 The intended real-data workflow is:
@@ -450,7 +476,7 @@ Its purpose is to inspect:
 - Loaded row and column counts.
 - Available tracking column names.
 - Source frame identifiers.
-- Sample DataFrame structure.
+- Aggregate missing-value counts (no tracking rows are printed).
 - Source conventions relevant to canonical ingestion.
 
 The script is intended for local inspection of authorized data.
@@ -492,11 +518,20 @@ Only source code, synthetic fixtures, tests, and permitted documentation should 
 
 ### Current Limitations
 
-The initial adapter does not yet resolve team membership automatically from actual EPTS metadata.
+`read_metrica_metadata()` now resolves membership from explicit EPTS
+home/away IDs and each track's team ID. It rejects missing or ambiguous
+assignments and unsupported position/speed units. Synthetic tests and the
+user's full real tactical run verify metadata compatibility. A documented
+source-unit override handles the export's incorrect kph declaration.
 
-Real source schema conventions and metadata structures have not been verified.
+`scripts/audit_metrica.py` runs the existing tracking, storage, quality,
+lineage and causal feature pipeline into a new ignored processed directory.
+See [local runbook](../research/metrica-integration-audit.md). No real assets
+were opened during the 2026-10-20 repository-only audit.
 
-Full-match memory usage, ingestion performance, and Parquet output sizes have not yet been measured.
+The full source audit measured approximately 71 seconds and 8.76 GiB peak
+process RSS. Corrected derived artifacts were rebuilt and independently
+verified without reopening raw EPTS. These are offline local workloads.
 
 The initial implementation uses an in-memory DataFrame and canonical-object conversion. Streaming or chunked processing may be introduced following real-dataset profiling.
 
@@ -512,18 +547,18 @@ The initial implementation uses an in-memory DataFrame and canonical-object conv
 
 These components are considered implemented only after their corresponding code and automated tests pass.
 
-**Pending real-data verification:**
+**Verified tactical integration:**
 
-- Access to the authorized Metrica tracking dataset.
-- Validation against actual EPTS files.
-- Verified track-slot team mapping.
-- Full-match ingestion, Parquet storage, and quality reporting.
-- Frame alignment and source metadata verification.
-- End-to-end performance and data integrity assessment.
+- User-run full EPTS ingestion: 199,319 records, canonical 0–199318.
+- Explicit metadata team mapping, Parquet round trip, quality and lineage.
+- Corrected documented m/s source contract and new full canonical artifacts.
+- Independently verified causal features on all frame keys and all 14 values.
+- Full-run performance and integrity assessment; raw observations remain private.
 
-**Phase 1.5 status: In progress — awaiting real-data verification.**
+**Phase 1.5 status: PASS locally; GitHub CI for pending changes unverified.**
 
-Phase 1 will be considered complete only after the authorized real-match integration has been successfully validated.
+Phase 1 local engineering acceptance is complete with documented tracking
+outliers, missing coverage and memory limitations.
 
 ## Planned pipeline stages
 
@@ -589,11 +624,12 @@ This is a **schema example**, not evidence of an executed production inference r
 | ATD/video frame conversion | Implemented, locally tested (P1.1) |
 | Synthetic table generator | Implemented, locally tested (P1.2) |
 | Pandas-table ingestion adapter | Implemented, locally tested (P1.2) |
-| Source metadata team mapping | Planned; not yet verified with real data |
-| Official XML/TXT ingestion | Planned; needs licensed assets |
-| Parquet / DuckDB analytical storage | Planned (P1.3) |
-| Data quality report | Planned (P1.4) |
-| Feature engineering / possession model | Planned |
+| Source metadata team mapping | Implemented with explicit IDs; full tactical run verified |
+| Official XML/TXT ingestion | Full tactical user-run source audit verified |
+| Parquet / DuckDB analytical storage | Corrected full tactical artifacts verified |
+| Data quality report | Full tactical report and aggregate review verified |
+| Causal feature engineering | All 14 columns verified against corrected real canonical input |
+| Possession model | Planned |
 | API / interactive tactical replay | Planned |
 
 ## Competition data restrictions

@@ -10,12 +10,18 @@ wheels/
 .venv
 
 
-# Generated tracking datasets
+# Restricted and generated football datasets
+/datasets/raw/
+/datasets/processed/
 /datasets/generated/
 
-# Restricted match data (keep all private)
-/datasets/raw/
+# Accidental extraction at repository root
+/data/
 
+# macOS archive metadata
+.DS_Store
+__MACOSX/
+    
 # AI .md
 AGENTS.md
 CLAUDE.md

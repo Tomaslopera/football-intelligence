@@ -6,6 +6,33 @@
 **Product name:** Not finalized  
 **Last planning update:** October 2026
 
+## Current measured checkpoint — 2026-10-20
+
+Full tactical EPTS ingestion, canonical Parquet, quality and feature output
+have now executed successfully on the user's machine: 199,319 frames,
+0–199318, 56.9379% ball coverage, 3,782,421 positioned player observations,
+70.85 seconds and 8.76 GiB process peak memory. Sanitized processed-data
+review independently verified all 14 feature columns, all frame keys,
+schemas and original fingerprints. No source observations were exposed to
+the agent; raw EPTS comparison is provided as a user-run local command.
+
+Phase 1.5 and Phase 2.1 now **pass local acceptance**. The official DATA.md
+documents Kloppy EPTS speeds as m/s, resolving the contradictory XML kph
+declaration for BAR-ATH tactical. Its source contract now records declared
+and effective units plus evidence; ordinary kph data still converts once.
+The agent rebuilt corrected canonical tracking and causal features at
+`datasets/processed/metrica/BAR-ATH/tactical-real-full-02/` from the validated
+old canonical artifacts, preserving raw assets and the original run. This
+rebuild is not a new raw ingestion. All 14 feature columns independently
+match on all 199,319 keys; corrected motion/reported speed ratio is 1.00348.
+The old full-01 data is superseded for downstream use. GitHub CI for pending
+changes is unverified. Phase 2.2 is technically ready but has not started.
+
+High ball-speed trajectories, missing-ball intervals and out-of-bounds
+observations are preserved and documented in
+`docs/research/metrica-integration-audit.md`. Defer the production memory
+rewrite for now; 8.76 GiB is a substantial local offline limitation.
+
 ## 1. Mission
 
 Build a production-grade, visually impressive football intelligence platform covering four technical disciplines:
@@ -211,13 +238,14 @@ The intended local data organization is:
 datasets/
   raw/
     metrica/
-      barcelona-athletic/
+      BAR-ATH/
         tactical/
-        video/
-        tagging/
+        broadcast/
   processed/
     metrica/
-      barcelona-athletic/
+      BAR-ATH/
+        tactical/
+        broadcast/
   generated/
     demo/
     quality-demo/
@@ -303,14 +331,10 @@ Prepared and pushed:
 - Synthetic compatibility tests.
 - inspect_metrica.py inspection utility.
 
-Still outstanding:
-- Authorized real-file inspection.
-- Verified mapping from source track slots to home/away teams.
-- Real schema and coordinate validation.
-- Full-match ingestion.
-- Real-data Parquet output.
-- Quality and lineage analysis using the real match.
-- Performance and memory profiling.
+Subsequently executed locally: full-match ingestion, metadata-based mapping,
+canonical Parquet, quality/lineage, causal features and performance profiling.
+The official documented m/s source contract and corrected full derived-data
+rebuild resolve physical speed-unit validation for local acceptance.
 
 Phase 1.5 must remain open until real integration has been verified.
 
@@ -416,13 +440,22 @@ Completed and pushed:
 - Phase 1.5 preparatory adapter.
 
 Not yet completed:
-- Full Phase 1.5 verification with real source data.
-- Phase 2 AI engine.
+- GitHub CI verification for the locally accepted Phase 1.5/2.1 changes.
+- Phase 2.2 ML experimentation (Phase 2.0 contracts and Phase 2.1 causal
+  features are implemented and locally verified).
 - Backend application.
 - Frontend application.
 - Cloud deployment.
 
 CI for the Phase 1.5 push should be confirmed independently if its result is not already recorded.
+
+The 2026-10-20 repository audit added a reproducible local EPTS audit runner
+and explicit metadata mapping checks. Licensed source assets were not opened
+because enrollment terms were unavailable. Subsequently the user executed
+the full real audit; sanitized review and a documented source-unit correction
+completed local acceptance. See `docs/research/metrica-integration-audit.md` and
+`PROJECT_STATUS.md` for the current checkpoint. Earlier phase descriptions
+above describe the preparatory milestones, not real-match validation.
 
 ## 13. Immediate Next Steps
 

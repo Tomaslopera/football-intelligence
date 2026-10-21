@@ -1,6 +1,43 @@
 # Football Feature Engineering — Phase 2.1
 
-**Status:** Implemented and locally tested using deterministic synthetic tracking data. Final milestone closure requires documentation review and successful CI verification.
+**Status:** Implemented and tested with synthetic data and the full real tactical
+recording. Independent recomputation matches all 14 feature columns on 199,319
+frames. Phase 2.1 passes local acceptance using corrected
+`tactical-real-full-02`; GitHub CI for the pending changes is unverified.
+
+## Real tactical quality checkpoint
+
+The local full run (`tactical-real-full-01`) has 56.94% ball coverage and
+3,782,421 positioned player observations. Versioned feature schemas, keys,
+nulls and all geometric/causal values match independent SQL recomputation
+within 1e-8. Tracking and feature fingerprints still match the original audit.
+
+The 1,151 ball-speed estimates above 50 m/s are reproduced from adjacent
+visible positions, not missing-frame bridging. They form 87 sustained runs;
+their physical cause is unverified, and values remain untouched. Missing-ball
+streak [190630,199319) lasts 8,689 frames (347.56 s), after the published final
+whistle. Other long within-half missing intervals remain an inference concern.
+Out-of-bounds observations (4,964 ball and 43,911 player) are retained.
+
+The initial dataset's reported-speed scale was low by 3.6. The official
+challenge DATA.md explicitly defines Kloppy EPTS speeds as m/s, resolving the
+conflict with this export's XML kph declaration. The BAR-ATH tactical source
+contract now records that correction and preserves source speed numbers.
+Generic genuine-kph sources still divide by 3.6. Existing speed features and
+the 15 m/s quality threshold retain their canonical definitions.
+
+Use `tactical-real-full-02`, rebuilt from validated canonical input with
+upstream fingerprints and then regenerated through the causal feature
+pipeline. It has a reported-speed median 1.33548 m/s, maximum 11.29383 m/s,
+and motion/reported ratio 1.00348. All 14 feature columns match independent
+recomputation. Preserve `tactical-real-full-01` for provenance, not model input.
+
+The 70.85 s / 8.76 GiB full audit is acceptable as a completed offline local
+verification with a documented memory limitation, not a serving workload.
+No feature algorithm or original raw source asset was modified. The new
+derived artifact corrects only the reported-player-speed scale and rebuilds
+features with recorded official-source evidence.
+See [complete evidence and acceptance decisions](../research/metrica-integration-audit.md).
 
 ## 1. Purpose
 
@@ -50,6 +87,15 @@ Primary implementation files:
 - `src/football_intelligence/features/pipeline.py`
 
 The pipeline is independently executable and separate from future API request handling.
+
+EPTS source speed units are resolved upstream in `load_metrica_epts()`.
+Kloppy 3.19.1 preserves source speed numbers: declared `kph` is divided by
+3.6 once at that adapter boundary, while `m/s` passes through unchanged.
+The real tactical XML's `kph` declaration was reported by the user; the
+documented BAR-ATH tactical exception treats the numbers as m/s and records
+both declared and effective units. Features receive canonical m/s values
+and perform no additional conversion.
+Ball speed estimated from displacement and FPS is already in m/s.
 
 ## 3. Geometric Features
 
